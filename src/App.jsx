@@ -146,7 +146,9 @@ const pinStyles = {
     transition: 'background 0.15s',
   },
   hiddenInput: {
-    position: 'absolute', opacity: 0, pointerEvents: 'none',
+    width: '100%', padding: '14px', background: '#0a1020', border: '1px solid #1a2a44',
+    borderRadius: 8, color: '#00ff88', fontSize: 24, textAlign: 'center',
+    fontFamily: "'JetBrains Mono', monospace", letterSpacing: 12, marginBottom: 16,
   },
   error: {
     fontFamily: "'JetBrains Mono', monospace",
