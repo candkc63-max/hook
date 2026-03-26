@@ -49,7 +49,10 @@ function PinLock({ onUnlock }) {
   const [pin, setPin] = useState('');
   const [mode, setMode] = useState('check'); // 'setup' | 'check'
   const [error, setError] = useState('');
+  const [showReset, setShowReset] = useState(false);
+  const [resetConfirm, setResetConfirm] = useState(false);
   const inputRef = useRef(null);
+  const [attempts, setAttempts] = useState(0);
 
   useEffect(() => {
     const savedPin = localStorage.getItem(PIN_KEY);
@@ -70,12 +73,28 @@ function PinLock({ onUnlock }) {
       const saved = localStorage.getItem(PIN_KEY);
       if (pin === saved) {
         localStorage.setItem(AUTH_KEY, Date.now().toString());
+        setAttempts(0);
         onUnlock();
       } else {
-        setError('Yanlış PIN.');
+        const newAttempts = attempts + 1;
+        setAttempts(newAttempts);
+        setError(`Yanlış PIN. (${newAttempts}. deneme)`);
         setPin('');
+        if (newAttempts >= 3) setShowReset(true);
       }
     }
+  };
+
+  const resetPin = () => {
+    localStorage.removeItem(PIN_KEY);
+    localStorage.removeItem(AUTH_KEY);
+    setMode('setup');
+    setPin('');
+    setError('');
+    setShowReset(false);
+    setResetConfirm(false);
+    setAttempts(0);
+    inputRef.current?.focus();
   };
 
   return (
@@ -115,6 +134,27 @@ function PinLock({ onUnlock }) {
         <button onClick={submit} style={pinStyles.btn}>
           {mode === 'setup' ? 'PIN Oluştur' : 'Giriş'}
         </button>
+
+        {mode === 'check' && (
+          <button
+            onClick={() => showReset ? setResetConfirm(true) : setShowReset(true)}
+            style={pinStyles.resetLink}
+          >
+            {showReset ? 'PIN\'i Sıfırla' : 'PIN\'imi Unuttum'}
+          </button>
+        )}
+
+        {resetConfirm && (
+          <div style={pinStyles.resetBox}>
+            <p style={pinStyles.resetWarn}>
+              PIN sıfırlanacak. Yeni PIN oluşturmanız gerekecek. Kayıtlı verileriniz silinmez.
+            </p>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+              <button onClick={resetPin} style={pinStyles.resetConfirmBtn}>Sıfırla</button>
+              <button onClick={() => { setResetConfirm(false); }} style={pinStyles.resetCancelBtn}>İptal</button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -159,6 +199,31 @@ const pinStyles = {
     padding: '14px 40px', background: '#00ff88', color: '#060b14',
     border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 700,
     letterSpacing: 2, cursor: 'pointer', textTransform: 'uppercase',
+  },
+  resetLink: {
+    fontFamily: "'JetBrains Mono', monospace",
+    background: 'none', border: 'none', color: '#4a6fa5',
+    fontSize: 11, cursor: 'pointer', marginTop: 20, padding: 8,
+    textDecoration: 'underline',
+  },
+  resetBox: {
+    marginTop: 16, padding: 16, background: '#0a1020',
+    border: '1px solid #ff446644', borderRadius: 8,
+  },
+  resetWarn: {
+    fontFamily: "'JetBrains Mono', monospace",
+    color: '#ffaa00', fontSize: 11, marginBottom: 12, lineHeight: 1.5,
+  },
+  resetConfirmBtn: {
+    fontFamily: "'JetBrains Mono', monospace",
+    padding: '10px 20px', background: '#ff4466', color: '#fff',
+    border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 700,
+    cursor: 'pointer',
+  },
+  resetCancelBtn: {
+    fontFamily: "'JetBrains Mono', monospace",
+    padding: '10px 20px', background: '#1a2a44', color: '#d0d8e8',
+    border: 'none', borderRadius: 6, fontSize: 12, cursor: 'pointer',
   },
 };
 
@@ -578,8 +643,8 @@ export default function App() {
 
   useEffect(() => {
     const ts = localStorage.getItem(AUTH_KEY);
-    // Session valid for 24 hours
-    if (ts && Date.now() - parseInt(ts) < 86400000) setAuthed(true);
+    // Session valid for 30 days
+    if (ts && Date.now() - parseInt(ts) < 2592000000) setAuthed(true);
   }, []);
 
   if (!authed) return <PinLock onUnlock={() => setAuthed(true)} />;
